@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
+#include <concepts>
 #include <lib2k/random.hpp>
 #include <vector>
-#include <concepts>
 
 static constexpr auto count = std::size_t{ 10'000'000 };
 
@@ -45,5 +45,37 @@ static void with_range_check(benchmark::State& state) {
 }
 
 BENCHMARK(with_range_check);
+
+template<typename T, bool use_at>
+void access_pattern(benchmark::State& state, std::vector<T> const& data, std::vector<size_t> const& indices) {
+    for (auto _ : state) {
+        T sum = 0;
+        for (size_t index : indices) {
+            if constexpr (use_at) {
+                sum += data.at(index);
+            } else {
+                sum += data[index];
+            }
+        }
+        benchmark::DoNotOptimize(sum);
+        benchmark::ClobberMemory();
+    }
+}
+
+static void with_range_check_varying_sizes(benchmark::State& state) {
+    auto const numbers = random_vector(state.range(0), 1u, 101u);
+    auto const indices = random_vector(state.range(0), std::size_t{ 0 }, numbers.size());
+    access_pattern<decltype(numbers)::value_type, true>(state, numbers, indices);
+}
+
+BENCHMARK(with_range_check_varying_sizes)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);
+
+static void no_range_check_varying_sizes(benchmark::State& state) {
+    auto const numbers = random_vector(state.range(0), 1u, 101u);
+    auto const indices = random_vector(state.range(0), std::size_t{ 0 }, numbers.size());
+    access_pattern<decltype(numbers)::value_type, false>(state, numbers, indices);
+}
+
+BENCHMARK(no_range_check_varying_sizes)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);
 
 BENCHMARK_MAIN();
