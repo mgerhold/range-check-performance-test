@@ -50,7 +50,7 @@ template<typename T, bool use_at>
 void access_pattern(benchmark::State& state, std::vector<T> const& data, std::vector<size_t> const& indices) {
     for (auto _ : state) {
         T sum = 0;
-        for (size_t index : indices) {
+        for (auto const index : indices) {
             if constexpr (use_at) {
                 sum += data.at(index);
             } else {
